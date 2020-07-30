@@ -3,6 +3,8 @@
 
 #include "libibackup/libibackup.h"
 
+#include <plist/plist.h>
+
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR "\\"
 #else

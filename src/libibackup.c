@@ -6,20 +6,28 @@
 #include <unistd.h>
 #include <string.h>
 
+char* libibackup_ensure_directory(const char* path) {
+    char* full_path;
+
+    if (path[strlen(path) - 1] != PATH_SEPARATOR[0]) {
+        full_path = malloc(strlen(path) + 2);
+        strcpy(full_path, path);
+        strcat(full_path, PATH_SEPARATOR);
+    }
+    else {
+        full_path = malloc(strlen(path) + 1);
+        strcpy(full_path, path);
+    }
+
+    return full_path;
+}
+
 bool libibackup_preflight_test_file(const char* directory, const char* file) {
     struct stat path_stat;
     char* full_path;
     char* test_path;
 
-    if (directory[strlen(directory) - 1] != PATH_SEPARATOR[0]) {
-        full_path = malloc(strlen(directory) + 2);
-        strcpy(full_path, directory);
-        strcat(full_path, PATH_SEPARATOR);
-    }
-    else {
-        full_path = malloc(strlen(directory) + 1);
-        strcpy(full_path, directory);
-    }
+    full_path = libibackup_ensure_directory(directory);
 
     test_path = malloc(strlen(full_path) + strlen(file) + 1);
     strcpy(test_path, full_path);
@@ -51,14 +59,17 @@ libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t*
         return IBACKUP_E_INVALID_ARG;
     }
 
-    client = malloc(sizeof(struct libibackup_client_private));
+    struct libibackup_client_private* private_client = malloc(sizeof(struct libibackup_client_private));
+    private_client->path = libibackup_ensure_directory(path);
 
+    *client = private_client;
 
     return IBACKUP_E_SUCCESS;
 }
 
 libibackup_error_t libibackup_close(libibackup_client_t client) {
     if (client != NULL) {
+        free(client->path);
         free(client);
     }
 
