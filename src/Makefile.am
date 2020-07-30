@@ -21,6 +21,7 @@ libibackup_1_0_la_SOURCES = \
 	libibackup.c libibackup.h
 
 
+
 if WIN32
 libibackup_1_0_la_LDFLAGS += -avoid-version -static-libgcc
 libibackup_1_0_la_LIBADD += -lole32 -lws2_32 -lgdi32

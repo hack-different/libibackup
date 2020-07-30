@@ -8,6 +8,40 @@
 #include <stdio.h>
 #include <plist/plist.h>
 
+bool libibackup_debug = false;
+
+EXPORT void libibackup_set_debug(bool debug) {
+    libibackup_debug = debug;
+}
+
+int64_t libibackup_manifest_query_count(sqlite3* database, const char* query, const char* parameter) {
+    sqlite3_stmt *count_statement;
+
+    if (libibackup_debug) {
+        printf("Preparing Count Statement\n");
+    }
+    sqlite3_prepare_v3(database, query, strlen(query), SQLITE_PREPARE_NORMALIZE, &count_statement, NULL);
+
+    if (parameter != NULL) {
+        sqlite3_bind_text(count_statement, 1, parameter, strlen(parameter), NULL);
+    }
+
+    if (sqlite3_step(count_statement) != SQLITE_ROW) {
+        return IBACKUP_E_DATA_ERROR;
+    }
+
+    uint64_t count = sqlite3_column_int64(count_statement, 0);
+    if (libibackup_debug) {
+        printf("Read count %llu\n", count);
+    }
+    sqlite3_finalize(count_statement);
+    if (libibackup_debug) {
+        printf("Finalizing Domain Count Statement\n");
+    }
+
+    return count;
+}
+
 char* libibackup_ensure_directory(const char* path) {
     char* full_path;
 
@@ -86,24 +120,109 @@ bool libibackup_preflight_backup(const char* path) {
             libibackup_preflight_test_file(path, "Manifest.db");
 }
 
-libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t* client) {
+EXPORT libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t* client) {
     if (libibackup_preflight_backup(path) == false) {
         return IBACKUP_E_INVALID_ARG;
     }
 
     struct libibackup_client_private* private_client = malloc(sizeof(struct libibackup_client_private));
     private_client->path = libibackup_ensure_directory(path);
+    if (libibackup_debug) {
+        printf("Opening Info.plist\n");
+    }
     private_client->info = libibackup_load_plist(path, "Info.plist");
+    if (libibackup_debug) {
+        printf("Opening Manifest.plist\n");
+    }
     private_client->manifest_info = libibackup_load_plist(path, "Manifest.plist");
     char* manifest_database_path = libibackup_combine_path(path, "Manifest.db");
-    sqlite3_open_v2(manifest_database_path, &private_client->manifest, SQLITE_OPEN_READONLY, NULL);
-
+    int db_result = sqlite3_open_v2(manifest_database_path, &private_client->manifest, SQLITE_OPEN_READONLY, NULL);
+    if (libibackup_debug) {
+        printf("Opening Manifest DB result: %d\n", db_result);
+    }
     *client = private_client;
 
     return IBACKUP_E_SUCCESS;
 }
 
-libibackup_error_t libibackup_close(libibackup_client_t client) {
+EXPORT libibackup_error_t libibackup_get_info(libibackup_client_t client, plist_t* info) {
+    *info = plist_copy(client->info);
+
+    return IBACKUP_E_SUCCESS;
+}
+
+EXPORT libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** domains) {
+    uint64_t count = libibackup_manifest_query_count(client->manifest, domains_count_query, NULL);
+
+    sqlite3_stmt *query_domains;
+
+    char** domain_list = calloc(count + 1, sizeof(char*));
+    domain_list[count + 1] = NULL;
+    int64_t index = 0;
+
+    if (libibackup_debug) {
+        printf("Preparing Domain Statement\n");
+    }
+    sqlite3_prepare_v3(client->manifest, domains_query, strlen(domains_query), SQLITE_PREPARE_NORMALIZE, &query_domains, NULL);
+
+    while(sqlite3_step(query_domains) == SQLITE_ROW) {
+        const char* domain_from_db = (const char*)sqlite3_column_text(query_domains, 0);
+        if (libibackup_debug) {
+            printf("Found Domain: %s\n", domain_from_db);
+        }
+        domain_list[index] = malloc(strlen(domain_from_db) + 1);
+        strcpy(domain_list[index], domain_from_db);
+        index++;
+    }
+
+    sqlite3_finalize(query_domains);
+
+    *domains = domain_list;
+
+    return IBACKUP_E_SUCCESS;
+}
+
+EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries) {
+    uint64_t count = libibackup_manifest_query_count(client->manifest, domain_count_file_query, domain);
+    if (libibackup_debug) {
+        printf("Files Count for Domain %s is %lld\n", domain, count);
+    }
+
+    libibackup_file_entry_t** file_list = calloc(count + 1, sizeof(void*));
+    file_list[count + 1] = NULL;
+    int64_t index = 0;
+
+    sqlite3_stmt *query_files;
+
+    int result = sqlite3_prepare_v3(client->manifest, domain_file_query, strlen(domain_file_query), SQLITE_PREPARE_NORMALIZE, &query_files, NULL);
+
+    sqlite3_bind_text(query_files, 1, domain, strlen(domain), NULL);
+
+    if (libibackup_debug) {
+        printf("File query prepare result %i\n", result);
+    }
+
+
+    while(sqlite3_step(query_files) == SQLITE_ROW) {
+        file_list[index] = malloc(sizeof(libibackup_file_entry_t));
+
+        char* relative_path = (char*)sqlite3_column_text(query_files, 2);
+
+        file_list[index]->relative_path = malloc(strlen(relative_path) + 1);
+        file_list[index]->domain = domain;
+        strcpy(file_list[index]->relative_path, relative_path);
+
+        index++;
+    }
+
+    sqlite3_finalize(query_files);
+
+    *entries = file_list;
+
+    return IBACKUP_E_SUCCESS;
+}
+
+EXPORT libibackup_error_t libibackup_close(libibackup_client_t client) {
     if (client != NULL) {
         free(client->path);
         plist_free(client->info);

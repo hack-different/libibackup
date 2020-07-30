@@ -3,8 +3,9 @@
 
 #include "libibackup/libibackup.h"
 
-#include <plist/plist.h>
 #include <sqlite3.h>
+
+#define EXPORT __attribute__((visibility("default")))
 
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR "\\"
@@ -12,6 +13,10 @@
 #define PATH_SEPARATOR "/"
 #endif
 
+const char* domains_query = "SELECT DISTINCT domain FROM Files";
+const char* domains_count_query = "SELECT COUNT(DISTINCT domain) FROM Files";
+const char* domain_count_file_query = "SELECT COUNT(*) FROM Files WHERE domain = ?";
+const char* domain_file_query = "SELECT * FROM Files WHERE domain = ?";
 
 struct libibackup_client_private {
     char* path;

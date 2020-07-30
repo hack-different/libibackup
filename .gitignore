@@ -107,3 +107,6 @@ Makefile
 /src/.libs
 /doxygen.cfg
 /src/libibackup-1.0.pc
+/tools/ibackup_list
+/tools/.libs
+*.lai

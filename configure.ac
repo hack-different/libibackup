@@ -15,7 +15,7 @@ dnl libtool versioning
 #                 changes to the signature and the semantic)
 #  ? :+1 : ?   == just internal changes
 # CURRENT : REVISION : AGE
-LIBIBACKUP_SO_VERSION=1:0:0
+LIBIBACKUP_SO_VERSION=1:0:1
 
 dnl Minimum package versions
 LIBPLIST_VERSION=2.2.0
