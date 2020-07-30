@@ -6,11 +6,12 @@ AM_CFLAGS = \
 	$(GLOBAL_CFLAGS) \
 	$(libplist_CFLAGS) \
 	$(LFS_CFLAGS) \
-	$(sqlite_CFLAGS) \
+	$(sqlite3_CFLAGS) \
 	$(PTHREAD_CFLAGS)
 
 AM_LDFLAGS = \
-	$(sqlite_LIBS) \
+	$(sqlite3_LIBS) \
+	$(libplist_LIBS) \
 	$(PTHREAD_LIBS)
 
 lib_LTLIBRARIES = libibackup-1.0.la
