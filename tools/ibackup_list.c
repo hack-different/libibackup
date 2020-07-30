@@ -1,8 +1,12 @@
 #include <libibackup/libibackup.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <plist/plist.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,11 +37,45 @@ void list_files(libibackup_client_t client, char* domain) {
 
     int64_t index = 0;
     while (file_list[index] != NULL) {
-        printf("File: %s\n", file_list[index]->relative_path);
+        printf("%s: %s\n", file_list[index]->file_id, file_list[index]->relative_path);
         index++;
     }
 
     free(file_list);
+}
+
+void get_file_metadata(libibackup_client_t client, char* file_id) {
+    plist_t metadata;
+    char* xml;
+    uint32_t length;
+    libibackup_get_file_metadata_by_id(client, file_id, &metadata);
+
+    plist_to_xml(metadata, &xml, &length);
+
+    printf("Metadata\n%s\n", xml);
+}
+
+void get_file(libibackup_client_t client, char* file_id) {
+    char* file_path;
+    struct stat path_stat;
+
+    libibackup_get_file_by_id(client, file_id, &file_path);
+    stat(file_path, &path_stat);
+
+    FILE* file = fopen(file_path, "r");
+    if (file == NULL) {
+        printf("Unable to read file\n");
+        return;
+    }
+    void* data = malloc(path_stat.st_size);
+    printf("Read file with size %lld\n", path_stat.st_size);
+
+    fread(data, path_stat.st_size, 1, file);
+    fclose(file);
+
+    printf("Read Data Complete\n");
+
+    write(STDOUT_FILENO, data, path_stat.st_size);
 }
 
 int main(int argc, char **argv) {
@@ -59,6 +97,12 @@ int main(int argc, char **argv) {
     }
     if (strcmp(argv[1], "list_files") == 0) {
         list_files(client, argv[3]);
+    }
+    if (strcmp(argv[1], "get_file_metadata") == 0) {
+        get_file_metadata(client, argv[3]);
+    }
+    if (strcmp(argv[1], "get_file") == 0) {
+        get_file(client, argv[3]);
     }
 
     libibackup_close(client);

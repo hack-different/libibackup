@@ -16,7 +16,9 @@
 const char* domains_query = "SELECT DISTINCT domain FROM Files";
 const char* domains_count_query = "SELECT COUNT(DISTINCT domain) FROM Files";
 const char* domain_count_file_query = "SELECT COUNT(*) FROM Files WHERE domain = ?";
-const char* domain_file_query = "SELECT * FROM Files WHERE domain = ?";
+const char* domain_file_query = "SELECT fileID, domain, relativePath, flags FROM Files WHERE domain = ?";
+const char* file_metadata_query = "SELECT file FROM Files WHERE fileID = ?";
+const char* file_query = "SELECT fileID, domain, relativePath, flags, file FROM Files WHERE fileID = ?";
 
 struct libibackup_client_private {
     char* path;

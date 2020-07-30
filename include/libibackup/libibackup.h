@@ -20,7 +20,7 @@ typedef struct libibackup_client_private libibackup_client_private;
 typedef libibackup_client_private *libibackup_client_t; /**< The client handle. */
 
 typedef struct {
-    char* id;
+    char* file_id;
     char* domain;
     char* relative_path;
 } libibackup_file_entry_t;
@@ -37,7 +37,7 @@ libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** d
 
 libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries);
 
-libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, char* file_id);
+libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, char* file_id, char** full_path);
 
 libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata);
 

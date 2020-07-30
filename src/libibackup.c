@@ -120,6 +120,48 @@ bool libibackup_preflight_backup(const char* path) {
             libibackup_preflight_test_file(path, "Manifest.db");
 }
 
+EXPORT libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, char* file_id, char** full_path)
+{
+    char* file_component = malloc(strlen(file_id) + 4);
+    file_component[0] = file_id[0];
+    file_component[1] = file_id[1];
+    file_component[2] = PATH_SEPARATOR[0];
+    strncpy(file_component + 3, file_id, strlen(file_id));
+
+    char* path = libibackup_combine_path(client->path, file_component);
+    *full_path = path;
+    free(file_component);
+
+    if (libibackup_debug) {
+        printf("Full File Path for %s is %s\n", file_id, path);
+    }
+
+    return IBACKUP_E_SUCCESS;
+}
+
+EXPORT libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata) {
+    sqlite3_stmt *query_metadata;
+    if (libibackup_debug) {
+        printf("Query for Metadata for ID %s\n", file_id);
+    }
+
+    sqlite3_prepare_v3(client->manifest, file_metadata_query, strlen(file_metadata_query), SQLITE_PREPARE_NORMALIZE, &query_metadata, NULL);
+
+    sqlite3_bind_text(query_metadata, 1, file_id, strlen(file_id), NULL);
+
+    if (sqlite3_step(query_metadata) == SQLITE_ROW) {
+        if (libibackup_debug) {
+            printf("Metadata for file found\n");
+        }
+        const void* metadata_blob = sqlite3_column_blob(query_metadata, 0);
+        int metadata_size = sqlite3_column_bytes(query_metadata, 0);
+
+        plist_from_memory(metadata_blob, metadata_size, metadata);
+    }
+
+    return IBACKUP_E_SUCCESS;
+}
+
 EXPORT libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t* client) {
     if (libibackup_preflight_backup(path) == false) {
         return IBACKUP_E_INVALID_ARG;
@@ -207,9 +249,12 @@ EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t c
         file_list[index] = malloc(sizeof(libibackup_file_entry_t));
 
         char* relative_path = (char*)sqlite3_column_text(query_files, 2);
+        char* file_id = (char*)sqlite3_column_text(query_files, 0);
 
         file_list[index]->relative_path = malloc(strlen(relative_path) + 1);
         file_list[index]->domain = domain;
+        file_list[index]->file_id = malloc(strlen(file_id) + 1);
+        strcpy(file_list[index]->file_id, file_id);
         strcpy(file_list[index]->relative_path, relative_path);
 
         index++;
