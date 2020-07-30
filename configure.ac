@@ -19,6 +19,7 @@ LIBIBACKUP_SO_VERSION=1:0:0
 
 dnl Minimum package versions
 LIBPLIST_VERSION=2.2.0
+SQLITE_VERSION=3.0
 
 AC_SUBST(LIBIBACKUP_SO_VERSION)
 AC_SUBST(LIBPLIST_VERSION)
@@ -31,6 +32,8 @@ AC_PROG_LIBTOOL
 
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist-2.0 >= $LIBPLIST_VERSION)
+PKG_CHECK_MODULES(sqlite3, sqlite3 >= $SQLITE_VERSION)
+
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -109,7 +112,6 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 AC_OUTPUT([
 Makefile
-common/Makefile
 src/Makefile
 src/libibackup-1.0.pc
 include/Makefile
