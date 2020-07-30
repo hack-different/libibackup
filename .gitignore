@@ -103,3 +103,7 @@ Makefile
 # Editors
 
 .idea/
+/libtool
+/src/.libs
+/doxygen.cfg
+/src/libibackup-1.0.pc
