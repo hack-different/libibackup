@@ -334,3 +334,7 @@ EXPORT libibackup_error_t libibackup_close(libibackup_client_t client) {
 
     return IBACKUP_E_SUCCESS;
 }
+
+EXPORT void libibackup_free(void* object) {
+    free(object);
+}

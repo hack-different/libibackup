@@ -61,6 +61,8 @@ libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client
 
 libibackup_error_t libibackup_close(libibackup_client_t client);
 
+void libibackup_free(void* object);
+
 
 #ifdef __cplusplus
 }
