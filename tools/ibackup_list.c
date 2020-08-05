@@ -44,6 +44,10 @@ void list_files(libibackup_client_t client, char* domain) {
     free(file_list);
 }
 
+void remove_file(libibackup_client_t client, char* file_id) {
+    libibackup_remove_file_by_id(client, file_id);
+}
+
 void get_file_metadata(libibackup_client_t client, char* file_id) {
     plist_t metadata;
     char* xml;
@@ -73,9 +77,17 @@ void get_file(libibackup_client_t client, char* file_id) {
     fread(data, path_stat.st_size, 1, file);
     fclose(file);
 
-    printf("Read Data Complete\n");
-
-    write(STDOUT_FILENO, data, path_stat.st_size);
+    if (strncmp(data, "bplist00", 8) == 0) {
+        plist_t data_plist;
+        char* xml_plist;
+        uint32_t size;
+        plist_from_memory(data, path_stat.st_size, &data_plist);
+        plist_to_xml(data_plist, &xml_plist, &size);
+        write(STDOUT_FILENO, xml_plist, size);
+    }
+    else {
+        write(STDOUT_FILENO, data, path_stat.st_size);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -103,6 +115,9 @@ int main(int argc, char **argv) {
     }
     if (strcmp(argv[1], "get_file") == 0) {
         get_file(client, argv[3]);
+    }
+    if (strcmp(argv[1], "remove_file") == 0) {
+        remove_file(client, argv[3]);
     }
 
     libibackup_close(client);

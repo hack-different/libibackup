@@ -139,6 +139,11 @@ EXPORT libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, 
     return IBACKUP_E_SUCCESS;
 }
 
+EXPORT libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t client, char* file_id) {
+    char* file_path;
+    libibackup_get_file_by_id(client, file_id, &file_path);
+}
+
 EXPORT libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata) {
     sqlite3_stmt *query_metadata;
     if (libibackup_debug) {
@@ -178,7 +183,7 @@ EXPORT libibackup_error_t libibackup_open_backup(const char* path, libibackup_cl
     }
     private_client->manifest_info = libibackup_load_plist(path, "Manifest.plist");
     char* manifest_database_path = libibackup_combine_path(path, "Manifest.db");
-    int db_result = sqlite3_open_v2(manifest_database_path, &private_client->manifest, SQLITE_OPEN_READONLY, NULL);
+    int db_result = sqlite3_open_v2(manifest_database_path, &private_client->manifest, SQLITE_OPEN_READWRITE, NULL);
     if (libibackup_debug) {
         printf("Opening Manifest DB result: %d\n", db_result);
     }
