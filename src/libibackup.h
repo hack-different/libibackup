@@ -32,10 +32,4 @@ struct libibackup_client_private {
     sqlite3* manifest;
 };
 
-typedef struct {
-    uint32_t owner;
-    uint32_t group;
-
-} libibackup_file_manifest;
-
 #endif

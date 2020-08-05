@@ -29,9 +29,21 @@ typedef struct {
     char* relative_path;
 } libibackup_file_entry_t;
 
+typedef struct {
+    uint32_t owner;
+    uint32_t group;
+    size_t size;
+    char* path;
+    char* target;
+} libibackup_file_manifest;
+
 void libibackup_set_debug(bool debug);
 
 bool libibackup_preflight_backup(const char* path);
+
+char* libibackup_combine_path(const char* directory, const char* file);
+
+char* libibackup_get_path_for_file_id(libibackup_client_t client, const char* file_id);
 
 libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t* client);
 

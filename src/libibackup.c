@@ -59,7 +59,7 @@ char* libibackup_ensure_directory(const char* path) {
     return full_path;
 }
 
-char* libibackup_combine_path(const char* directory, const char* file) {
+EXPORT char* libibackup_combine_path(const char* directory, const char* file) {
     char* full_path;
     char* file_path;
 
@@ -154,17 +154,22 @@ EXPORT libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t clien
     return IBACKUP_E_SUCCESS;
 }
 
-EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, char* domain, char* relative_path, void* data, size_t length) {
-    char file_hash[SHA1_HASH_LENGTH];
-    SHA1(file_hash, data, length);
-
-    char* file_path = malloc(SHA1_HASH_LENGTH + 3);
-    file_path[0] = file_hash[0];
-    file_path[1] = file_hash[1];
+EXPORT char* libibackup_get_path_for_file_id(libibackup_client_t client, const char* file_id) {
+    char* file_path = malloc(SHA1_HASH_LENGTH + 4);
+    file_path[0] = file_id[0];
+    file_path[1] = file_id[1];
     file_path[2] = PATH_SEPARATOR[0];
-    strcpy(file_path, file_hash);
+    strcpy(&file_path[3], file_id);
 
-    char* full_data_path = libibackup_combine_path(client->path, file_path);
+    return libibackup_combine_path(client->path, file_path);
+}
+
+EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, char* domain, char* relative_path, void* data, size_t length) {
+    char file_hash[SHA1_HASH_LENGTH + 1];
+    SHA1(file_hash, data, length);
+    file_hash[SHA1_HASH_LENGTH] = '\0';
+
+    char* full_data_path = libibackup_get_path_for_file_id(client, file_hash);
 
     FILE* output_data_file = fopen(full_data_path, "w");
 
@@ -174,6 +179,12 @@ EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, char* 
 
     sqlite3_stmt *insert_file_statement;
     sqlite3_prepare_v3(client->manifest, create_new_file_query, strlen(create_new_file_query), SQLITE_PREPARE_NORMALIZE, &insert_file_statement, NULL);
+
+    if (sqlite3_step(insert_file_statement) != SQLITE_DONE) {
+
+    }
+
+    return IBACKUP_E_SUCCESS;
 }
 
 EXPORT libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata) {

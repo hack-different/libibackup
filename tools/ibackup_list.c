@@ -59,6 +59,42 @@ void get_file_metadata(libibackup_client_t client, char* file_id) {
     printf("Metadata\n%s\n", xml);
 }
 
+void check_files(libibackup_client_t client) {
+    struct stat file_stat;
+    char* file_path = malloc(24);
+    char* combined_path;
+    printf("Checking for broken files\n");
+    libibackup_file_entry_t **file_list;
+    char **domain_list;
+    libibackup_list_domains(client, &domain_list);
+
+    int64_t domain_index = 0;
+    while (domain_list[domain_index] != NULL) {
+        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list);
+
+        int64_t file_index = 0;
+        while (file_list[file_index] != NULL) {
+            combined_path = libibackup_get_path_for_file_id(client, file_path);
+
+            if (stat(combined_path, &file_stat) != 0) {
+                printf("Broken File at path %s", combined_path);
+            }
+
+            free(combined_path);
+            file_index++;
+        }
+
+        printf("Scanned %lld files in domain %s\n", file_index, domain_list[domain_index]);
+
+        free(file_list);
+
+        free(domain_list[domain_index]);
+        domain_index++;
+    }
+    free(file_path);
+    free(domain_list);
+}
+
 void get_file(libibackup_client_t client, char* file_id) {
     char* file_path;
     struct stat path_stat;
@@ -91,7 +127,7 @@ void get_file(libibackup_client_t client, char* file_id) {
 }
 
 int main(int argc, char **argv) {
-    libibackup_set_debug(true);
+    //libibackup_set_debug(true);
     if (argc < 3) {
         printf("Invalid Arguments\n");
         return -1;
@@ -118,6 +154,9 @@ int main(int argc, char **argv) {
     }
     if (strcmp(argv[1], "remove_file") == 0) {
         remove_file(client, argv[3]);
+    }
+    if (strcmp(argv[1], "check_files") == 0) {
+        check_files(client);
     }
 
     libibackup_close(client);
