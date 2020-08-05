@@ -1,4 +1,5 @@
 #include "libibackup.h"
+#include "sha.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -140,8 +141,39 @@ EXPORT libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, 
 }
 
 EXPORT libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t client, char* file_id) {
+    sqlite3_stmt *delete_file_statement;
     char* file_path;
     libibackup_get_file_by_id(client, file_id, &file_path);
+
+    sqlite3_prepare_v3(client->manifest, delete_file_query, strlen(delete_file_query), SQLITE_PREPARE_NORMALIZE, &delete_file_statement, NULL);
+
+    sqlite3_bind_text(delete_file_statement, 1, file_path, strlen(file_path), NULL);
+
+    sqlite3_step(delete_file_statement);
+
+    return IBACKUP_E_SUCCESS;
+}
+
+EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, char* domain, char* relative_path, void* data, size_t length) {
+    char file_hash[SHA1_HASH_LENGTH];
+    SHA1(file_hash, data, length);
+
+    char* file_path = malloc(SHA1_HASH_LENGTH + 3);
+    file_path[0] = file_hash[0];
+    file_path[1] = file_hash[1];
+    file_path[2] = PATH_SEPARATOR[0];
+    strcpy(file_path, file_hash);
+
+    char* full_data_path = libibackup_combine_path(client->path, file_path);
+
+    FILE* output_data_file = fopen(full_data_path, "w");
+
+    fwrite(data, length, 1, output_data_file);
+
+    fclose(output_data_file);
+
+    sqlite3_stmt *insert_file_statement;
+    sqlite3_prepare_v3(client->manifest, create_new_file_query, strlen(create_new_file_query), SQLITE_PREPARE_NORMALIZE, &insert_file_statement, NULL);
 }
 
 EXPORT libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata) {
@@ -187,7 +219,15 @@ EXPORT libibackup_error_t libibackup_open_backup(const char* path, libibackup_cl
     if (libibackup_debug) {
         printf("Opening Manifest DB result: %d\n", db_result);
     }
+
     *client = private_client;
+
+    sqlite3_stmt *integrity_check;
+    printf("Performing integrity check:\n");
+    sqlite3_prepare_v3(private_client->manifest, integrity_check_query, strlen(integrity_check_query), SQLITE_PREPARE_NORMALIZE, &integrity_check, NULL);
+    while (sqlite3_step(integrity_check) == SQLITE_ROW) {
+        printf("%s\n", sqlite3_column_text(integrity_check, 0));
+    }
 
     return IBACKUP_E_SUCCESS;
 }

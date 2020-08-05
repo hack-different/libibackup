@@ -18,7 +18,8 @@ lib_LTLIBRARIES = libibackup-1.0.la
 libibackup_1_0_la_LIBADD =
 libibackup_1_0_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBIBACKUP_SO_VERSION) -no-undefined
 libibackup_1_0_la_SOURCES = \
-	libibackup.c libibackup.h
+	libibackup.c libibackup.h \
+	sha.c sha.h
 
 
 

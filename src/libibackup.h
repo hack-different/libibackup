@@ -13,6 +13,7 @@
 #define PATH_SEPARATOR "/"
 #endif
 
+const char* integrity_check_query = "PRAGMA integrity_check(1000)";
 const char* domains_query = "SELECT DISTINCT domain FROM Files";
 const char* domains_count_query = "SELECT COUNT(DISTINCT domain) FROM Files";
 const char* domain_count_file_query = "SELECT COUNT(*) FROM Files WHERE domain = ?";
@@ -20,6 +21,9 @@ const char* domain_file_query = "SELECT fileID, domain, relativePath, flags FROM
 const char* file_metadata_query = "SELECT file FROM Files WHERE fileID = ?";
 const char* file_query = "SELECT fileID, domain, relativePath, flags, file FROM Files WHERE fileID = ?";
 const char* delete_file_query = "DELETE FROM Files WHERE fileID = ?";
+const char* create_new_file_query = "INSERT INTO Files (fileID, domain, relativePath, flags, file) VALUES (?, ?, ?, 1, ?)";
+const char* update_file_query = "UPDATE Files SET fileID = ? WHERE fileID = ?";
+const char* update_file_metadata_query = "UPDATE Files SET file = ? WHERE fileID = ?";
 
 struct libibackup_client_private {
     char* path;
@@ -27,5 +31,11 @@ struct libibackup_client_private {
     plist_t manifest_info;
     sqlite3* manifest;
 };
+
+typedef struct {
+    uint32_t owner;
+    uint32_t group;
+
+} libibackup_file_manifest;
 
 #endif
