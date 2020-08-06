@@ -148,7 +148,9 @@ void list_all_files(libibackup_client_t client) {
 
         int64_t file_index = 0;
         while (file_list[file_index] != NULL) {
-            libibackup_get_metadata_by_id(client, file_list[file_index]->file_id, &metadata);
+            if (file_list[file_index]->type != IBACKUP_FLAG_SYMBOLIC_LINK) {
+                libibackup_get_metadata_by_id(client, file_list[file_index]->file_id, &metadata);
+            }
             switch (file_list[file_index]->type) {
                 case IBACKUP_FLAG_FILE:
                     printf("%s: [%s] %s (size %llu)\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
