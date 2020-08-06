@@ -108,7 +108,7 @@ bool libibackup_preflight_test_file(const char* directory, const char* file) {
     return S_ISREG(path_stat.st_mode);
 }
 
-bool libibackup_preflight_backup(const char* path) {
+EXPORT bool libibackup_preflight_backup(const char* path) {
     struct stat path_stat;
     stat(path, &path_stat);
 

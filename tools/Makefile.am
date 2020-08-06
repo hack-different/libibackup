@@ -13,9 +13,14 @@ AM_LDFLAGS = \
 	$(libplist_LIBS)
 
 bin_PROGRAMS = \
-	ibackup_list
+	ibackup_list ibackup_extract
 
 ibackup_list_SOURCES = ibackup_list.c
 ibackup_list_CFLAGS = $(AM_CFLAGS)
 ibackup_list_LDFLAGS = $(AM_LDFLAGS)
 ibackup_list_LDADD = $(top_builddir)/src/libibackup-1.0.la
+
+ibackup_extract_SOURCES = ibackup_extract.c
+ibackup_extract_CFLAGS = $(AM_CFLAGS)
+ibackup_extract_LDFLAGS = $(AM_LDFLAGS)
+ibackup_extract_LDADD = $(top_builddir)/src/libibackup-1.0.la
