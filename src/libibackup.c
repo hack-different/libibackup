@@ -187,7 +187,7 @@ EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, char* 
     return IBACKUP_E_SUCCESS;
 }
 
-EXPORT libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata) {
+EXPORT libibackup_error_t libibackup_get_raw_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata) {
     sqlite3_stmt *query_metadata;
     if (libibackup_debug) {
         printf("Query for Metadata for ID %s\n", file_id);
@@ -280,6 +280,64 @@ EXPORT libibackup_error_t libibackup_list_domains(libibackup_client_t client, ch
     return IBACKUP_E_SUCCESS;
 }
 
+EXPORT libibackup_error_t libibackup_get_domain_metrics(libibackup_client_t client, char* domain, libibackup_domain_metrics* metrics) {
+    sqlite3_stmt *metrics_query;
+    sqlite3_prepare_v3(client->manifest, domain_count_file_grouped_query, strlen(domain_count_file_grouped_query), SQLITE_PREPARE_NORMALIZE, &metrics_query, NULL);
+    sqlite3_bind_text(metrics_query, 1, domain, strlen(domain), NULL);
+
+    metrics->file_count = 0;
+    metrics->directory_count = 0;
+    metrics->symlink_count = 0;
+
+    while (sqlite3_step(metrics_query) == SQLITE_ROW) {
+        uint32_t count = sqlite3_column_int(metrics_query, 0);
+        switch (sqlite3_column_int(metrics_query, 1)) {
+            case IBACKUP_FLAG_FILE:
+                metrics->file_count = count;
+                break;
+            case IBACKUP_FLAG_DIRECTORY:
+                metrics->directory_count = count;
+                break;
+            case IBACKUP_FLAG_SYMBOLIC_LINK:
+                metrics->symlink_count = count;
+                break;
+        }
+    }
+
+    return IBACKUP_E_SUCCESS;
+}
+
+EXPORT libibackup_error_t libibackup_get_metadata_by_id(libibackup_client_t client, char* file_id, libibackup_file_metadata* metadata) {
+    memset(metadata, 0, sizeof(libibackup_file_metadata));
+
+    plist_t raw_metadata;
+    libibackup_get_raw_metadata_by_id(client, file_id, &raw_metadata);
+
+    plist_t objects = plist_dict_get_item(raw_metadata, "$objects");
+    plist_t mb_file = plist_array_get_item(objects, 1);
+    plist_t size_item = plist_dict_get_item(mb_file, "Size");
+    plist_t target_item = plist_dict_get_item(mb_file, "Target");
+    plist_get_uint_val(size_item, &metadata->size);
+
+    if (target_item != NULL) {
+        uint64_t index;
+        plist_get_uid_val(target_item, &index);
+        plist_t target_string_value = plist_array_get_item(objects, index);
+        plist_get_string_val(target_string_value, &metadata->target);
+
+        plist_free(target_string_value);
+        plist_free(target_item);
+    }
+
+    plist_free(size_item);
+    plist_free(mb_file);
+    plist_free(objects);
+
+    plist_free(raw_metadata);
+
+    return IBACKUP_E_SUCCESS;
+}
+
 EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries) {
     uint64_t count = libibackup_manifest_query_count(client->manifest, domain_count_file_query, domain);
     if (libibackup_debug) {
@@ -310,6 +368,7 @@ EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t c
         file_list[index]->relative_path = malloc(strlen(relative_path) + 1);
         file_list[index]->domain = domain;
         file_list[index]->file_id = malloc(strlen(file_id) + 1);
+        file_list[index]->type = sqlite3_column_int(query_files, 3);
         strcpy(file_list[index]->file_id, file_id);
         strcpy(file_list[index]->relative_path, relative_path);
 

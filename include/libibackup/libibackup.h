@@ -25,17 +25,25 @@ typedef libibackup_client_private *libibackup_client_t; /**< The client handle. 
 
 typedef struct {
     char* file_id;
+    uint32_t type;
     char* domain;
     char* relative_path;
+    char* target;
 } libibackup_file_entry_t;
 
 typedef struct {
     uint32_t owner;
     uint32_t group;
-    size_t size;
+    uint64_t size;
     char* path;
     char* target;
-} libibackup_file_manifest;
+} libibackup_file_metadata;
+
+typedef struct {
+    uint32_t file_count;
+    uint32_t directory_count;
+    uint32_t symlink_count;
+} libibackup_domain_metrics;
 
 void libibackup_set_debug(bool debug);
 
@@ -57,7 +65,11 @@ libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, char* f
 
 libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t client, char* file_id);
 
-libibackup_error_t libibackup_get_file_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata);
+libibackup_error_t libibackup_get_raw_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata);
+
+libibackup_error_t libibackup_get_metadata_by_id(libibackup_client_t client, char* file_id, libibackup_file_metadata* metadata);
+
+libibackup_error_t libibackup_get_domain_metrics(libibackup_client_t client, char* domain, libibackup_domain_metrics* metrics);
 
 libibackup_error_t libibackup_close(libibackup_client_t client);
 

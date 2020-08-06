@@ -17,6 +17,7 @@ const char* integrity_check_query = "PRAGMA integrity_check(1000)";
 const char* domains_query = "SELECT DISTINCT domain FROM Files";
 const char* domains_count_query = "SELECT COUNT(DISTINCT domain) FROM Files";
 const char* domain_count_file_query = "SELECT COUNT(*) FROM Files WHERE domain = ?";
+const char* domain_count_file_grouped_query = "SELECT COUNT(*), flags FROM Files WHERE domain = ? GROUP BY flags";
 const char* domain_file_query = "SELECT fileID, domain, relativePath, flags FROM Files WHERE domain = ?";
 const char* file_metadata_query = "SELECT file FROM Files WHERE fileID = ?";
 const char* file_query = "SELECT fileID, domain, relativePath, flags, file FROM Files WHERE fileID = ?";

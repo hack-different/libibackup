@@ -12,15 +12,37 @@
 extern "C" {
 #endif
 
+const char* file_type_string_for_type(uint32_t type) {
+    switch (type) {
+        case IBACKUP_FLAG_FILE:
+            return "F";
+        case IBACKUP_FLAG_DIRECTORY:
+            return "D";
+        case IBACKUP_FLAG_SYMBOLIC_LINK:
+            return "S";
+    }
+    return "U";
+}
+
+void get_file_path(libibackup_client_t client, char* file_id) {
+    char* file_path = libibackup_get_path_for_file_id(client, file_id);
+
+    printf("Full Path: %s\n", file_path);
+
+    libibackup_free(file_path);
+}
 
 void list_domains(libibackup_client_t client) {
+    libibackup_domain_metrics metrics;
     printf("Listing Domains\n");
     char **domain_list;
     libibackup_list_domains(client, &domain_list);
 
     int64_t index = 0;
     while (domain_list[index] != NULL) {
-        printf("Domain: %s\n", domain_list[index]);
+        libibackup_get_domain_metrics(client, domain_list[index], &metrics);
+        printf("Domain: %s (%d files, %d directories, %d symlinks)\n", domain_list[index],
+               metrics.file_count, metrics.directory_count, metrics.symlink_count);
 
         free(domain_list[index]);
         index++;
@@ -32,12 +54,29 @@ void list_domains(libibackup_client_t client) {
 void list_files(libibackup_client_t client, char* domain) {
     printf("Listing files for domain %s\n", domain);
     libibackup_file_entry_t **file_list;
+    libibackup_file_metadata metadata;
+
 
     libibackup_list_files_for_domain(client, domain, &file_list);
 
     int64_t index = 0;
     while (file_list[index] != NULL) {
-        printf("%s: %s\n", file_list[index]->file_id, file_list[index]->relative_path);
+        libibackup_get_metadata_by_id(client, file_list[index]->file_id, &metadata);
+        switch (file_list[index]->type) {
+            case IBACKUP_FLAG_FILE:
+                printf("%s: [%s] %s (size %llu)\n", file_list[index]->file_id, file_type_string_for_type(file_list[index]->type),
+                       file_list[index]->relative_path, metadata.size);
+                break;
+            case IBACKUP_FLAG_DIRECTORY:
+                printf("%s: [%s] %s\n", file_list[index]->file_id, file_type_string_for_type(file_list[index]->type),
+                       file_list[index]->relative_path);
+                break;
+            case IBACKUP_FLAG_SYMBOLIC_LINK:
+                printf("%s: [%s] %s -> %s\n", file_list[index]->file_id, file_type_string_for_type(file_list[index]->type),
+                       file_list[index]->relative_path, metadata.target);
+                break;
+        }
+
         index++;
     }
 
@@ -52,7 +91,7 @@ void get_file_metadata(libibackup_client_t client, char* file_id) {
     plist_t metadata;
     char* xml;
     uint32_t length;
-    libibackup_get_file_metadata_by_id(client, file_id, &metadata);
+    libibackup_get_raw_metadata_by_id(client, file_id, &metadata);
 
     plist_to_xml(metadata, &xml, &length);
 
@@ -85,6 +124,48 @@ void check_files(libibackup_client_t client) {
         }
 
         printf("Scanned %lld files in domain %s\n", file_index, domain_list[domain_index]);
+
+        free(file_list);
+
+        free(domain_list[domain_index]);
+        domain_index++;
+    }
+    free(file_path);
+    free(domain_list);
+}
+
+void list_all_files(libibackup_client_t client) {
+    char* file_path = malloc(24);
+    libibackup_file_entry_t **file_list;
+    libibackup_file_metadata metadata;
+    char **domain_list;
+    libibackup_list_domains(client, &domain_list);
+
+    int64_t domain_index = 0;
+    while (domain_list[domain_index] != NULL) {
+        printf("Files in domain %s\n", domain_list[domain_index]);
+        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list);
+
+        int64_t file_index = 0;
+        while (file_list[file_index] != NULL) {
+            libibackup_get_metadata_by_id(client, file_list[file_index]->file_id, &metadata);
+            switch (file_list[file_index]->type) {
+                case IBACKUP_FLAG_FILE:
+                    printf("%s: [%s] %s (size %llu)\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
+                           file_list[file_index]->relative_path, metadata.size);
+                    break;
+                case IBACKUP_FLAG_DIRECTORY:
+                    printf("%s: [%s] %s\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
+                           file_list[file_index]->relative_path);
+                    break;
+                case IBACKUP_FLAG_SYMBOLIC_LINK:
+                    printf("%s: [%s] %s -> %s\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
+                           file_list[file_index]->relative_path, metadata.target);
+                    break;
+            }
+
+            file_index++;
+        }
 
         free(file_list);
 
@@ -143,20 +224,29 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "list_domains") == 0) {
         list_domains(client);
     }
-    if (strcmp(argv[1], "list_files") == 0) {
+    else if (strcmp(argv[1], "list_files") == 0) {
         list_files(client, argv[3]);
     }
-    if (strcmp(argv[1], "get_file_metadata") == 0) {
+    else if (strcmp(argv[1], "get_file_metadata") == 0) {
         get_file_metadata(client, argv[3]);
     }
-    if (strcmp(argv[1], "get_file") == 0) {
+    else if (strcmp(argv[1], "get_file") == 0) {
         get_file(client, argv[3]);
     }
-    if (strcmp(argv[1], "remove_file") == 0) {
+    else if (strcmp(argv[1], "remove_file") == 0) {
         remove_file(client, argv[3]);
     }
-    if (strcmp(argv[1], "check_files") == 0) {
+    else if (strcmp(argv[1], "check_files") == 0) {
         check_files(client);
+    }
+    else if (strcmp(argv[1], "list_all_files") == 0) {
+        list_all_files(client);
+    }
+    else if (strcmp(argv[1], "get_file_path") == 0) {
+        get_file_path(client, argv[3]);
+    }
+    else {
+        printf("Unknown command %s\n", argv[1]);
     }
 
     libibackup_close(client);
