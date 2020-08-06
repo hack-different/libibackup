@@ -148,7 +148,7 @@ void list_all_files(libibackup_client_t client) {
 
         int64_t file_index = 0;
         while (file_list[file_index] != NULL) {
-            if (file_list[file_index]->type != IBACKUP_FLAG_SYMBOLIC_LINK) {
+            if (file_list[file_index]->type != IBACKUP_FLAG_DIRECTORY) {
                 libibackup_get_metadata_by_id(client, file_list[file_index]->file_id, &metadata);
             }
             switch (file_list[file_index]->type) {
