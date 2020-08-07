@@ -32,7 +32,7 @@ void get_file_path(libibackup_client_t client, char* file_id) {
     libibackup_free(file_path);
 }
 
-void list_domains(libibackup_client_t client) {
+void list_domains(libibackup_client_t client, bool empty) {
     libibackup_domain_metrics metrics;
     printf("Listing Domains\n");
     char **domain_list;
@@ -41,8 +41,10 @@ void list_domains(libibackup_client_t client) {
     int64_t index = 0;
     while (domain_list[index] != NULL) {
         libibackup_get_domain_metrics(client, domain_list[index], &metrics);
-        printf("Domain: %s (%d files, %d directories, %d symlinks)\n", domain_list[index],
-               metrics.file_count, metrics.directory_count, metrics.symlink_count);
+        if (empty || metrics.file_count != 0) {
+            printf("Domain: %s (%d files, %d directories, %d symlinks)\n", domain_list[index],
+                   metrics.file_count, metrics.directory_count, metrics.symlink_count);
+        }
 
         free(domain_list[index]);
         index++;
@@ -224,7 +226,10 @@ int main(int argc, char **argv) {
 
 
     if (strcmp(argv[1], "list_domains") == 0) {
-        list_domains(client);
+        list_domains(client, true);
+    }
+    else if (strcmp(argv[1], "list_non_empty_domains") == 0) {
+        list_domains(client, false);
     }
     else if (strcmp(argv[1], "list_files") == 0) {
         list_files(client, argv[3]);
