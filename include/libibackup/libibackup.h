@@ -25,10 +25,10 @@ typedef libibackup_client_private *libibackup_client_t; /**< The client handle. 
 
 typedef struct {
     char* file_id;
-    uint32_t type;
     char* domain;
     char* relative_path;
     char* target;
+    uint32_t type;
 } libibackup_file_entry_t;
 
 typedef struct {

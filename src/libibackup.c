@@ -155,11 +155,11 @@ EXPORT libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t clien
 }
 
 EXPORT char* libibackup_get_path_for_file_id(libibackup_client_t client, const char* file_id) {
-    char* file_path = malloc(SHA1_HASH_LENGTH + 4);
+    char* file_path = malloc(strlen(file_id) + 4);
     file_path[0] = file_id[0];
     file_path[1] = file_id[1];
     file_path[2] = PATH_SEPARATOR[0];
-    strcpy(&file_path[3], file_id);
+    strcpy(file_path + 3, file_id);
 
     return libibackup_combine_path(client->path, file_path);
 }
@@ -366,11 +366,12 @@ EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t c
         char* file_id = (char*)sqlite3_column_text(query_files, 0);
 
         file_list[index]->relative_path = malloc(strlen(relative_path) + 1);
-        file_list[index]->domain = domain;
+        file_list[index]->domain = malloc(strlen(domain) + 1);
         file_list[index]->file_id = malloc(strlen(file_id) + 1);
         file_list[index]->type = sqlite3_column_int(query_files, 3);
         strcpy(file_list[index]->file_id, file_id);
         strcpy(file_list[index]->relative_path, relative_path);
+        strcpy(file_list[index]->domain, domain);
 
         index++;
     }
