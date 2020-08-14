@@ -57,9 +57,13 @@ libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t*
 
 libibackup_error_t libibackup_get_info(libibackup_client_t client, plist_t* info);
 
-libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** domains);
+libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** domains, uint32_t *count);
 
-libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries);
+libibackup_error_t libibackup_free_list_domains(char** domains);
+
+libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries, uint32_t *count);
+
+libibackup_error_t libibackup_free_list_files_for_domain(libibackup_file_entry_t** entries);
 
 libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, char* file_id, char** full_path);
 

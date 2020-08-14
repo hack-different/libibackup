@@ -249,13 +249,17 @@ EXPORT libibackup_error_t libibackup_get_info(libibackup_client_t client, plist_
     return IBACKUP_E_SUCCESS;
 }
 
-EXPORT libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** domains) {
-    uint64_t count = libibackup_manifest_query_count(client->manifest, domains_count_query, NULL);
+EXPORT libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** domains, uint32_t* count) {
+    uint32_t local_count;
+    if (count == NULL) {
+        count = &local_count;
+    }
+    *count = libibackup_manifest_query_count(client->manifest, domains_count_query, NULL);
 
     sqlite3_stmt *query_domains;
 
-    char** domain_list = calloc(count + 1, sizeof(char*));
-    domain_list[count + 1] = NULL;
+    char** domain_list = calloc(*count + 1, sizeof(char*));
+    domain_list[*count + 1] = NULL;
     int64_t index = 0;
 
     if (libibackup_debug) {
@@ -338,14 +342,18 @@ EXPORT libibackup_error_t libibackup_get_metadata_by_id(libibackup_client_t clie
     return IBACKUP_E_SUCCESS;
 }
 
-EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries) {
-    uint64_t count = libibackup_manifest_query_count(client->manifest, domain_count_file_query, domain);
+EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries, uint32_t* count) {
+    uint32_t local_count;
+    if (count == NULL) {
+        count = &local_count;
+    }
+    *count = libibackup_manifest_query_count(client->manifest, domain_count_file_query, domain);
     if (libibackup_debug) {
-        printf("Files Count for Domain %s is %lld\n", domain, count);
+        printf("Files Count for Domain %s is %d\n", domain, *count);
     }
 
-    libibackup_file_entry_t** file_list = calloc(count + 1, sizeof(void*));
-    file_list[count + 1] = NULL;
+    libibackup_file_entry_t** file_list = calloc(*count + 1, sizeof(void*));
+    file_list[*count + 1] = NULL;
     int64_t index = 0;
 
     sqlite3_stmt *query_files;

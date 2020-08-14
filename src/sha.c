@@ -282,10 +282,10 @@ void SHA1Final(
 void SHA1(
         char *hash_out,
         const char *str,
-        int len)
+        uint32_t len)
 {
     SHA1_CTX ctx;
-    unsigned int ii;
+    uint32_t ii;
 
     SHA1Init(&ctx);
     for (ii=0; ii<len; ii+=1)

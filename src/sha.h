@@ -41,6 +41,6 @@ void SHA1Final(
 void SHA1(
         char *hash_out,
         const char *str,
-        int len);
+        uint32_t len);
 
 #endif /* SHA1_H */

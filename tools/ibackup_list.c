@@ -36,7 +36,7 @@ void list_domains(libibackup_client_t client, bool empty) {
     libibackup_domain_metrics metrics;
     printf("Listing Domains\n");
     char **domain_list;
-    libibackup_list_domains(client, &domain_list);
+    libibackup_list_domains(client, &domain_list, NULL);
 
     int64_t index = 0;
     while (domain_list[index] != NULL) {
@@ -59,7 +59,7 @@ void list_files(libibackup_client_t client, char* domain) {
     libibackup_file_metadata metadata;
 
 
-    libibackup_list_files_for_domain(client, domain, &file_list);
+    libibackup_list_files_for_domain(client, domain, &file_list, NULL);
 
     int64_t index = 0;
     while (file_list[index] != NULL) {
@@ -107,11 +107,11 @@ void check_files(libibackup_client_t client) {
     printf("Checking for broken files\n");
     libibackup_file_entry_t **file_list;
     char **domain_list;
-    libibackup_list_domains(client, &domain_list);
+    libibackup_list_domains(client, &domain_list, NULL);
 
     int64_t domain_index = 0;
     while (domain_list[domain_index] != NULL) {
-        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list);
+        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list, NULL);
 
         int64_t file_index = 0;
         while (file_list[file_index] != NULL) {
@@ -141,12 +141,12 @@ void list_all_files(libibackup_client_t client) {
     libibackup_file_entry_t **file_list;
     libibackup_file_metadata metadata;
     char **domain_list;
-    libibackup_list_domains(client, &domain_list);
+    libibackup_list_domains(client, &domain_list, NULL);
 
     int64_t domain_index = 0;
     while (domain_list[domain_index] != NULL) {
         printf("Files in domain %s\n", domain_list[domain_index]);
-        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list);
+        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list, NULL);
 
         int64_t file_index = 0;
         while (file_list[file_index] != NULL) {
