@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.64)
-AC_INIT([libibackup], [0.9], [https://github.com/libimobiledevice/libibackup/issues],, [https://libimobiledevice.org])
+AC_PREREQ([2.71])
+AC_INIT([libibackup],[0.9],[https://github.com/libimobiledevice/libibackup/issues],[],[https://libimobiledevice.org])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip check-news])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_SRCDIR([src/])
@@ -20,6 +20,7 @@ LIBIBACKUP_SO_VERSION=1:0:1
 dnl Minimum package versions
 LIBPLIST_VERSION=2.2.0
 SQLITE_VERSION=3.0
+LIMD_GLUE_VERSION=1.0.0
 
 AC_SUBST(LIBIBACKUP_SO_VERSION)
 AC_SUBST(LIBPLIST_VERSION)
@@ -28,15 +29,24 @@ AC_SUBST(LIBPLIST_VERSION)
 AC_PROG_CC
 AC_PROG_CXX
 AM_PROG_CC_C_O
-AC_PROG_LIBTOOL
+LT_INIT
 
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist-2.0 >= $LIBPLIST_VERSION)
 PKG_CHECK_MODULES(sqlite3, sqlite3 >= $SQLITE_VERSION)
+PKG_CHECK_MODULES(limd_glue, libimobiledevice-glue-1.0 >= $LIMD_GLUE_VERSION)
 
 
 # Checks for header files.
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro `STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  ISO C90 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h gcrypt.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -110,7 +120,7 @@ AC_SYS_LARGEFILE
 
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 src/Makefile
 src/libibackup-1.0.pc
@@ -119,6 +129,7 @@ tools/Makefile
 docs/Makefile
 doxygen.cfg
 ])
+AC_OUTPUT
 
 echo "
 Configuration for $PACKAGE $VERSION:
