@@ -59,4 +59,3 @@ AC_DEFUN([AS_COMPILER_FLAGS],
   fi
   $1="$$1 $flags_supported"
 ])
-
