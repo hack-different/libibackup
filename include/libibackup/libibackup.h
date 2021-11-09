@@ -1,7 +1,30 @@
-#ifndef LIBIBACKUP_H
+/*
+ * libibackup.h
+ *
+ * Copyright (C) 2021 Rick Mark <rickmark@outlook.com>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+#ifndef __LIBIBACKUP_H
+#define __LIBIBACKUP_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <plist/plist.h>
+#include <libimobiledevice-glue/collection.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,15 +60,13 @@ typedef struct {
     uint64_t size;
     char* path;
     char* target;
-} libibackup_file_metadata;
+} libibackup_file_metadata_t;
 
 typedef struct {
     uint32_t file_count;
     uint32_t directory_count;
     uint32_t symlink_count;
-} libibackup_domain_metrics;
-
-void libibackup_set_debug(bool debug);
+} libibackup_domain_metrics_t;
 
 bool libibackup_preflight_backup(const char* path);
 
@@ -57,32 +78,26 @@ libibackup_error_t libibackup_open_backup(const char* path, libibackup_client_t*
 
 libibackup_error_t libibackup_get_info(libibackup_client_t client, plist_t* info);
 
-libibackup_error_t libibackup_list_domains(libibackup_client_t client, char*** domains, uint32_t *count);
+libibackup_error_t libibackup_list_domains(libibackup_client_t client, /* of char* */ collection_t *domains);
 
-libibackup_error_t libibackup_free_list_domains(char** domains);
+libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, const char* domain, /* of libibackup_file_entry_t* */ collection_t *files);
 
-libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t client, char* domain, libibackup_file_entry_t*** entries, uint32_t *count);
+libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, const char* file_id, char** full_path);
 
-libibackup_error_t libibackup_free_list_files_for_domain(libibackup_file_entry_t** entries);
+libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t client, const char* file_id);
 
-libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, char* file_id, char** full_path);
+libibackup_error_t libibackup_get_raw_metadata_by_id(libibackup_client_t client, const char* file_id, plist_t* metadata);
 
-libibackup_error_t libibackup_remove_file_by_id(libibackup_client_t client, char* file_id);
+libibackup_error_t libibackup_get_metadata_by_id(libibackup_client_t client, const char* file_id, libibackup_file_metadata_t* metadata);
 
-libibackup_error_t libibackup_get_raw_metadata_by_id(libibackup_client_t client, char* file_id, plist_t* metadata);
-
-libibackup_error_t libibackup_get_metadata_by_id(libibackup_client_t client, char* file_id, libibackup_file_metadata* metadata);
-
-libibackup_error_t libibackup_get_domain_metrics(libibackup_client_t client, char* domain, libibackup_domain_metrics* metrics);
+libibackup_error_t libibackup_get_domain_metrics(libibackup_client_t client, const char* domain, libibackup_domain_metrics_t* metrics);
 
 libibackup_error_t libibackup_close(libibackup_client_t client);
 
-void libibackup_free(void* object);
-
+void libibackup_free(void* obj);
 
 #ifdef __cplusplus
 }
 #endif
 
-#define LIBIBACKUP_H
-#endif
+#endif // __LIBIBACKUP_H

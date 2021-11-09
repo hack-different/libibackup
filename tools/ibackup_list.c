@@ -33,56 +33,58 @@ void get_file_path(libibackup_client_t client, char* file_id) {
 }
 
 void list_domains(libibackup_client_t client, bool empty) {
-    libibackup_domain_metrics metrics;
+    libibackup_domain_metrics_t metrics;
     printf("Listing Domains\n");
-    char **domain_list;
-    libibackup_list_domains(client, &domain_list, NULL);
+    collection_t *domains = collection_new();
+    libibackup_list_domains(client, domains);
 
     int64_t index = 0;
-    while (domain_list[index] != NULL) {
-        libibackup_get_domain_metrics(client, domain_list[index], &metrics);
+    while (domains->list[index] != NULL) {
+        libibackup_get_domain_metrics(client, domains->list[index], &metrics);
         if (empty || metrics.file_count != 0) {
-            printf("Domain: %s (%d files, %d directories, %d symlinks)\n", domain_list[index],
+            printf("Domain: %s (%d files, %d directories, %d symlinks)\n", (char*)domains->list[index],
                    metrics.file_count, metrics.directory_count, metrics.symlink_count);
         }
 
-        free(domain_list[index]);
+        free(domains->list[index]);
         index++;
     }
 
-    free(domain_list);
+    collection_free(domains);
 }
 
 void list_files(libibackup_client_t client, char* domain) {
     printf("Listing files for domain %s\n", domain);
-    libibackup_file_entry_t **file_list;
-    libibackup_file_metadata metadata;
+    collection_t *files = collection_new();
+    libibackup_file_entry_t *file;
+    libibackup_file_metadata_t metadata;
 
-
-    libibackup_list_files_for_domain(client, domain, &file_list, NULL);
+    libibackup_list_files_for_domain(client, domain, files);
 
     int64_t index = 0;
-    while (file_list[index] != NULL) {
-        libibackup_get_metadata_by_id(client, file_list[index]->file_id, &metadata);
-        switch (file_list[index]->type) {
+    while (files->list[index] != NULL) {
+        file = (libibackup_file_entry_t*)files->list[index];
+
+        libibackup_get_metadata_by_id(client,file->file_id, &metadata);
+        switch (file->type) {
             case IBACKUP_FLAG_FILE:
-                printf("%s: [%s] %s (size %llu)\n", file_list[index]->file_id, file_type_string_for_type(file_list[index]->type),
-                       file_list[index]->relative_path, metadata.size);
+                printf("%s: [%s] %s (size %llu)\n", file->file_id, file_type_string_for_type(file->type),
+                       file->relative_path, metadata.size);
                 break;
             case IBACKUP_FLAG_DIRECTORY:
-                printf("%s: [%s] %s\n", file_list[index]->file_id, file_type_string_for_type(file_list[index]->type),
-                       file_list[index]->relative_path);
+                printf("%s: [%s] %s\n", file->file_id, file_type_string_for_type(file->type),
+                       file->relative_path);
                 break;
             case IBACKUP_FLAG_SYMBOLIC_LINK:
-                printf("%s: [%s] %s -> %s\n", file_list[index]->file_id, file_type_string_for_type(file_list[index]->type),
-                       file_list[index]->relative_path, metadata.target);
+                printf("%s: [%s] %s -> %s\n", file->file_id, file_type_string_for_type(file->type),
+                       file->relative_path, metadata.target);
                 break;
         }
 
         index++;
     }
 
-    free(file_list);
+    collection_free_all(files);
 }
 
 void remove_file(libibackup_client_t client, char* file_id) {
@@ -105,16 +107,17 @@ void check_files(libibackup_client_t client) {
     char* file_path = malloc(24);
     char* combined_path;
     printf("Checking for broken files\n");
-    libibackup_file_entry_t **file_list;
-    char **domain_list;
-    libibackup_list_domains(client, &domain_list, NULL);
+    collection_t* files;
+    collection_t* domains = collection_new();
+    libibackup_list_domains(client, domains);
 
     int64_t domain_index = 0;
-    while (domain_list[domain_index] != NULL) {
-        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list, NULL);
+    while (domains->list[domain_index] != NULL) {
+        files = collection_new();
+        libibackup_list_files_for_domain(client, domains->list[domain_index], files);
 
         int64_t file_index = 0;
-        while (file_list[file_index] != NULL) {
+        while (files->list[file_index] != NULL) {
             combined_path = libibackup_get_path_for_file_id(client, file_path);
 
             if (stat(combined_path, &file_stat) != 0) {
@@ -125,59 +128,60 @@ void check_files(libibackup_client_t client) {
             file_index++;
         }
 
-        printf("Scanned %lld files in domain %s\n", file_index, domain_list[domain_index]);
+        printf("Scanned %lld files in domain %s\n", file_index, (char*)domains->list[domain_index]);
 
-        free(file_list);
+        collection_free_all(files);
 
-        free(domain_list[domain_index]);
         domain_index++;
     }
     free(file_path);
-    free(domain_list);
+
+    collection_free_all(domains);
 }
 
 void list_all_files(libibackup_client_t client) {
-    char* file_path = malloc(24);
-    libibackup_file_entry_t **file_list;
-    libibackup_file_metadata metadata;
-    char **domain_list;
-    libibackup_list_domains(client, &domain_list, NULL);
-
     int64_t domain_index = 0;
-    while (domain_list[domain_index] != NULL) {
-        printf("Files in domain %s\n", domain_list[domain_index]);
-        libibackup_list_files_for_domain(client, domain_list[domain_index], &file_list, NULL);
+    collection_t *files = collection_new();
+    libibackup_file_metadata_t metadata;
+    libibackup_file_entry_t* file;
+    collection_t *domains = collection_new();
+    libibackup_list_domains(client, files);
+
+
+    while (domains->list[domain_index] != NULL) {
+        printf("Files in domain %s\n", (char*)domains->list[domain_index]);
+        libibackup_list_files_for_domain(client, domains->list[domain_index], files);
 
         int64_t file_index = 0;
-        while (file_list[file_index] != NULL) {
-            if (file_list[file_index]->type != IBACKUP_FLAG_DIRECTORY) {
-                libibackup_get_metadata_by_id(client, file_list[file_index]->file_id, &metadata);
+        while (files->list[file_index] != NULL) {
+            file = (libibackup_file_entry_t*)files->list[file_index];
+            if (file->type != IBACKUP_FLAG_DIRECTORY) {
+                libibackup_get_metadata_by_id(client, file->file_id, &metadata);
             }
-            switch (file_list[file_index]->type) {
+            switch (file->type) {
                 case IBACKUP_FLAG_FILE:
-                    printf("%s: [%s] %s (size %llu)\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
-                           file_list[file_index]->relative_path, metadata.size);
+                    printf("%s: [%s] %s (size %llu)\n", file->file_id, file_type_string_for_type(file->type),
+                           file->relative_path, metadata.size);
                     break;
                 case IBACKUP_FLAG_DIRECTORY:
-                    printf("%s: [%s] %s\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
-                           file_list[file_index]->relative_path);
+                    printf("%s: [%s] %s\n", file->file_id, file_type_string_for_type(file->type),
+                           file->relative_path);
                     break;
                 case IBACKUP_FLAG_SYMBOLIC_LINK:
-                    printf("%s: [%s] %s -> %s\n", file_list[file_index]->file_id, file_type_string_for_type(file_list[file_index]->type),
-                           file_list[file_index]->relative_path, metadata.target);
+                    printf("%s: [%s] %s -> %s\n", file->file_id, file_type_string_for_type(file->type),
+                           file->relative_path, metadata.target);
                     break;
             }
 
             file_index++;
         }
 
-        free(file_list);
-
-        free(domain_list[domain_index]);
+        collection_free_all(files);
+    
         domain_index++;
     }
-    free(file_path);
-    free(domain_list);
+    
+    collection_free_all(domains);
 }
 
 void get_file(libibackup_client_t client, char* file_id) {

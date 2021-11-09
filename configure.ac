@@ -20,7 +20,7 @@ LIBIBACKUP_SO_VERSION=1:0:1
 dnl Minimum package versions
 LIBPLIST_VERSION=2.2.0
 SQLITE_VERSION=3.0
-LIMD_GLUE_VERSION=1.0.0
+LIMD_GLUE_VERSION=1.1.0
 
 AC_SUBST(LIBIBACKUP_SO_VERSION)
 AC_SUBST(LIBPLIST_VERSION)
@@ -34,7 +34,7 @@ LT_INIT
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist-2.0 >= $LIBPLIST_VERSION)
 PKG_CHECK_MODULES(sqlite3, sqlite3 >= $SQLITE_VERSION)
-PKG_CHECK_MODULES(limd_glue, libimobiledevice-glue-1.0 >= $LIMD_GLUE_VERSION)
+PKG_CHECK_MODULES(limd_glue, libimobiledevice-glue-1.1 >= $LIMD_GLUE_VERSION)
 
 
 # Checks for header files.

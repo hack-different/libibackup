@@ -6,11 +6,13 @@ AM_CFLAGS = \
 	$(GLOBAL_CFLAGS) \
 	$(libplist_CFLAGS) \
 	$(sqlite3_CFLAGS) \
+	$(limd_glue_CFLAGS) \
 	$(LFS_CFLAGS)
 
 AM_LDFLAGS = \
 	$(sqlite3_LIBS) \
-	$(libplist_LIBS)
+	$(libplist_LIBS) \
+	$(limd_glue_LIBS)
 
 bin_PROGRAMS = \
 	ibackup_list ibackup_extract
