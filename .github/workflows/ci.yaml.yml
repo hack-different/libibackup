@@ -16,8 +16,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: true # Useful if your project uses git submodules
 
       - name: Install on Linux
         if: runner.os == 'Linux'
