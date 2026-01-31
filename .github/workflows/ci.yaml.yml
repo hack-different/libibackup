@@ -21,7 +21,7 @@ jobs:
 
       - name: Install on Linux
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y libimobiledevice-dev
+        run: sudo apt-get install -y libimobiledevice-dev libimobiledevice-glue-dev
 
       - name: Install on macOS
         if: runner.os == 'macOS'
