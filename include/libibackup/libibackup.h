@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+typedef struct collection collection_t;
+
 /** Error Codes */
 typedef enum {
     IBACKUP_E_SUCCESS = 0,

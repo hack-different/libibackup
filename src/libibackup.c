@@ -8,17 +8,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <plist/plist.h>
-#include <libimobiledevice-glue/sha1.h>
-#include <libimobiledevice-glue/debug.h>
+#include <libimobiledevice-glue/glue.h>
+#include <libimobiledevice-glue/sha.h>
 
+#define SHA1_HASH_LENGTH_BYTES 20
 
 int64_t libibackup_manifest_query_count(sqlite3* database, const char* query, const char* parameter) {
     sqlite3_stmt *count_statement;
 
     assert(database);
     assert(query);
-
-    LIMD_log_message(LIMD_DEBUG, "backup", "Preparing Count Statement\n");
 
     sqlite3_prepare_v3(database, query, strlen(query), SQLITE_PREPARE_NORMALIZE, &count_statement, NULL);
 
@@ -32,11 +31,7 @@ int64_t libibackup_manifest_query_count(sqlite3* database, const char* query, co
 
     uint64_t count = sqlite3_column_int64(count_statement, 0);
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Read count %llu\n", count);
-
     sqlite3_finalize(count_statement);
-
-    LIMD_log_message(LIMD_DEBUG, "backup", "Finalizing Domain Count Statement\n");
 
     return count;
 }
@@ -92,7 +87,7 @@ plist_t libibackup_load_plist(const char* directory, const char* file) {
     fread(data, 1, path_stat.st_size, file_handle);
     fclose(file_handle);
 
-    plist_from_memory(data, path_stat.st_size, &plist);
+    plist_from_memory(data, path_stat.st_size, &plist, NULL);
 
     free(file_path);
 
@@ -136,8 +131,6 @@ EXPORT libibackup_error_t libibackup_get_file_by_id(libibackup_client_t client, 
     *full_path = path;
     free(file_component);
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Full File Path for %s is %s\n", file_id, path);
-
     return IBACKUP_E_SUCCESS;
 }
 
@@ -169,9 +162,8 @@ EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, const 
     assert(client);
     
     unsigned char *file_hash = malloc(SHA1_HASH_LENGTH_BYTES + 1);
-    memset(file_hash, 0, SHA1_HASH_BLOCK_SIZE_BYTES + 1);
 
-    LIMD_SHA1(data, length, file_hash);
+    sha1(data, length, file_hash);
     file_hash[SHA1_HASH_LENGTH_BYTES] = '\0';
 
     char* full_data_path = libibackup_get_path_for_file_id(client, (const char*)file_hash);
@@ -195,19 +187,16 @@ EXPORT libibackup_error_t libibackup_add_file(libibackup_client_t client, const 
 EXPORT libibackup_error_t libibackup_get_raw_metadata_by_id(libibackup_client_t client, const char* file_id, plist_t* metadata) {
     sqlite3_stmt *query_metadata;
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Query for Metadata for ID %s\n", file_id);
-
     sqlite3_prepare_v3(client->manifest, file_metadata_query, strlen(file_metadata_query), SQLITE_PREPARE_NORMALIZE, &query_metadata, NULL);
 
     sqlite3_bind_text(query_metadata, 1, file_id, strlen(file_id), NULL);
 
     if (sqlite3_step(query_metadata) == SQLITE_ROW) {
-        LIMD_log_message(LIMD_DEBUG, "backup", "Metadata for file found\n");
 
         const void* metadata_blob = sqlite3_column_blob(query_metadata, 0);
         int metadata_size = sqlite3_column_bytes(query_metadata, 0);
 
-        plist_from_memory(metadata_blob, metadata_size, metadata);
+        plist_from_memory(metadata_blob, metadata_size, metadata, NULL);
     }
 
     return IBACKUP_E_SUCCESS;
@@ -224,23 +213,15 @@ EXPORT libibackup_error_t libibackup_open_backup(const char* path, libibackup_cl
     struct libibackup_client_private* private_client = malloc(sizeof(struct libibackup_client_private));
     private_client->path = libibackup_ensure_directory(path);
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Opening Info.plist\n");
-
     private_client->info = libibackup_load_plist(path, "Info.plist");
-
-    LIMD_log_message(LIMD_DEBUG, "backup", "Opening Manifest.plist\n");
 
     private_client->manifest_info = libibackup_load_plist(path, "Manifest.plist");
     char* manifest_database_path = libibackup_combine_path(path, "Manifest.db");
     int db_result = sqlite3_open_v2(manifest_database_path, &private_client->manifest, SQLITE_OPEN_READWRITE, NULL);
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Opening Manifest DB result: %d\n", db_result);
-
-
     *client = private_client;
 
     sqlite3_stmt *integrity_check;
-    LIMD_log_message(LIMD_DEBUG, "backup", "Performing integrity check:\n");
     sqlite3_prepare_v3(private_client->manifest, integrity_check_query, strlen(integrity_check_query), SQLITE_PREPARE_NORMALIZE, &integrity_check, NULL);
     while (sqlite3_step(integrity_check) == SQLITE_ROW) {
         printf("%s\n", sqlite3_column_text(integrity_check, 0));
@@ -260,19 +241,15 @@ EXPORT libibackup_error_t libibackup_list_domains(libibackup_client_t client, /*
     assert(domains);
 
     uint32_t count = libibackup_manifest_query_count(client->manifest, domains_count_query, NULL);
-    collection_ensure_capacity(domains, count);
 
     sqlite3_stmt *query_domains;
     int64_t index = 0;
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Preparing Domain Statement\n");
     
     sqlite3_prepare_v3(client->manifest, domains_query, strlen(domains_query), SQLITE_PREPARE_NORMALIZE, &query_domains, NULL);
 
     while(sqlite3_step(query_domains) == SQLITE_ROW) {
         const char* domain_from_db = (const char*)sqlite3_column_text(query_domains, 0);
-
-        LIMD_log_message(LIMD_DEBUG, "backup", "Found Domain: %s\n", domain_from_db);
         
         domains->list[index] = malloc(strlen(domain_from_db) + 1);
         strcpy(domains->list[index], domain_from_db);
@@ -347,17 +324,11 @@ EXPORT libibackup_error_t libibackup_list_files_for_domain(libibackup_client_t c
 
     count = libibackup_manifest_query_count(client->manifest, domain_count_file_query, domain);
 
-    LIMD_log_message(LIMD_DEBUG, "backup", "Files Count for Domain %s is %d\n", domain, count);
-
-    collection_ensure_capacity(files, count);
-
     sqlite3_stmt *query_files;
 
     int result = sqlite3_prepare_v3(client->manifest, domain_file_query, strlen(domain_file_query), SQLITE_PREPARE_NORMALIZE, &query_files, NULL);
 
     sqlite3_bind_text(query_files, 1, domain, strlen(domain), NULL);
-
-    LIMD_log_message(LIMD_DEBUG, "backup", "File query prepare result %i\n", result);
 
     index = 0;
     while(sqlite3_step(query_files) == SQLITE_ROW) 
