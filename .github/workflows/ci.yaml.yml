@@ -1,0 +1,40 @@
+name: CMake CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    # Run the job on a matrix of operating systems
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true # Useful if your project uses git submodules
+
+      - name: Install on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libimobiledevice-dev
+
+      - name: Install on macOS
+        if: runner.os == 'macOS'
+        run: brew install libimobiledevice
+
+      - name: Configure CMake
+        run: |
+          cmake -B ${{github.workspace}}/build
+        shell: bash # Use bash shell for consistent syntax across platforms
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest
